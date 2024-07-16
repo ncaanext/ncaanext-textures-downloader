@@ -15,7 +15,7 @@ from utils.download_repo import download_repo_main
 
 config_manager = ConfigManager()
 
-# Access configuration variables
+# Access co nfiguration variables
 debug_mode = config_manager.debug_mode
 initial_setup_done = config_manager.initial_setup_done
 local_directory = config_manager.local_directory
@@ -140,7 +140,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             save_config_new({'last_run_date': default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')})
         
         # Create a StringVar for initial_setup_done because it doesn't have an entry field
-        initial_setup_var = tk.StringVar(value="True")  # Set the initial value as needed
+        initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
 
         # Save Button
         config_dict_main = {
@@ -175,7 +175,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
         # Add a Text widget for the terminal with vertical scrollbar
         self.terminal_frame = tk.Frame(self)
-        self.terminal_text = tk.Text(self.terminal_frame, height=20, width=120, wrap=tk.WORD, padx=10, pady=10)
+        self.terminal_text = tk.Text(self.terminal_frame, height=17, width=120, wrap=tk.WORD, padx=10, pady=10)
         scrollbar = tk.Scrollbar(self.terminal_frame, command=self.terminal_text.yview)
         self.terminal_text.configure(yscrollcommand=scrollbar.set)
 
@@ -183,6 +183,10 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         self.terminal_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.terminal_frame.grid(row=11, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
+       
+        # Insert the warning text
+        self.terminal_text.insert(tk.END, "!!! ATTENTION !!! This Run Sync tool is only intented to be used for updates AFTER you have completed the initial installation. If you are attemping to do a first time download/install of the textures pack, click the 'Fresh Install' button at the bottom right of this screen.\n")
+        self.terminal_text.yview(tk.END)  # Scroll to the end to make the new text visible
 
 
 
@@ -340,7 +344,7 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
         # Add a Text widget for the terminal with vertical scrollbar
         self.terminal_frame = tk.Frame(self)
-        self.terminal_text = tk.Text(self.terminal_frame, height=20, width=120, wrap=tk.WORD, padx=10, pady=10)
+        self.terminal_text = tk.Text(self.terminal_frame, height=13, width=120, wrap=tk.WORD, padx=10, pady=10)
         scrollbar = tk.Scrollbar(self.terminal_frame, command=self.terminal_text.yview)
         self.terminal_text.configure(yscrollcommand=scrollbar.set)
 
@@ -383,7 +387,7 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
         # Heading
         heading_label = tk.Label(self, text="First Time Setup – Textures Installation", font=('TkDefaultFont', 18, 'bold'), justify="center")
-        heading_label.grid(row=0, column=0, columnspan=3, pady=(20,0))
+        heading_label.grid(row=0, column=0, columnspan=3, pady=(10,0))
         # Subheading
         subheading_label = tk.Label(self, text=f"{project_name} Version {version} • {release_date}", font=('TkDefaultFont', 12))
         subheading_label.grid(row=1, column=0, columnspan=3, pady=(0,5))
@@ -396,12 +400,12 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         hyperlink_label.bind("<Button-1>", open_hyperlink)
 
         # Body copy
-        description_text = "This utility will download all of the required textures packs and extract them in the proper order into your emulator's textures folder. This is a very large download and requires multiple GBs of free disk space  (see below for details). Don't proceed unless you have the necessary space and the time to leave this window  open to complete the downloads. Depending on your internet speed, this could take up to a few hours." 
+        description_text = "This utility will download all of the required textures packs and extract them in the proper order into your emulator's textures folder. This is a very large download and requires multiple GBs of free disk space  (see below for details). Don't proceed unless you have the necessary space and the time to leave this window open to complete the downloads. Depending on your internet speed, this could take up to a few hours." 
         description = tk.Label(self, text=description_text, justify=tk.LEFT, wraplength=750)
         description.grid(row=3, column=0, columnspan=3, pady=(0,10))
 
         # Path to Replacements
-        local_directory_entry_first_label = tk.Label(self, text="Enter the full path to your emulator's TEXTURES FOLDER and click Save Config.", font=('TkDefaultFont', 13, 'bold'), justify="center").grid(row=4, column=0, columnspan=3, sticky="n", padx=(0, 0))
+        local_directory_entry_first_label = tk.Label(self, text="Enter the full path to your emulator's TEXTURES FOLDER, click Save Config, and restart this app.", font=('TkDefaultFont', 13, 'bold'), justify="center").grid(row=4, column=0, columnspan=3, sticky="n", padx=(0, 0))
         local_directory_entry_first_label2 = tk.Label(self, text="Find this in PCSX2 > Settings > Graphics > Texture Replacements.", font=('TkDefaultFont', 13), justify="center").grid(row=5, column=0, columnspan=3, sticky="n", padx=(0, 0))
         local_directory_entry_first_label3 = tk.Label(self, text=r"Copy that path exactly as-is. Example: C:\Whatever\PCSX2\textures", font=('TkDefaultFont', 13), justify="center").grid(row=6, column=0, columnspan=3, sticky="n", padx=(0, 0))
         
@@ -438,10 +442,11 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             self.github_token_label.grid(row=3, column=1, columnspan=2, pady=(0, 10), padx=(5, 0), sticky="w")
         
         # Create a StringVar for initial_setup_done because it doesn't have an entry field
-        initial_setup_var = tk.StringVar(value="True")  # Set the initial value as needed
+        initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
 
         # Save Button Next to Input Field
-        config_dict = {"local_directory": local_directory_entry_first, "github_token": github_token_entry, "initial_setup_done": initial_setup_var}
+        # config_dict = {"local_directory": local_directory_entry_first, "github_token": github_token_entry, "initial_setup_done": initial_setup_var}
+        config_dict = {"local_directory": local_directory_entry_first, "github_token": github_token_entry}
         save_button_next_to_input = tk.Button(input_frame, text="Save Config", command=lambda: self.on_save_button_click(config_dict, save_button_next_to_input, self), justify="left", width=12, cursor="hand2")
         save_button_next_to_input.grid(row=0, column=4, rowspan=4,pady=(0, 3), padx=(5, 25), sticky="w")
 

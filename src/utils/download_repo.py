@@ -366,16 +366,19 @@ def download_repo_main(json_url, local_directory, slus_folder, terminal_text):
     # Get rid of the nested "textures" folder
     move_and_delete_folders(local_directory, slus_folder)
 
+    # Set initial_setup_done to True
+    config_manager.initial_setup_done = True
+
     terminal_text.insert(tk.END, "\n")   
     terminal_text.insert(tk.END, "\n")   
     terminal_text.insert(tk.END, "#-------------------------------------------------------------------#\n")
     terminal_text.insert(tk.END, "#                                                                   #\n")
-    terminal_text.insert(tk.END, "#                  TEXTURES INSTALLATION DONE!                      #\n")
+    terminal_text.insert(tk.END, "#               SUCCESS! TEXTURES INSTALLATION DONE!                #\n")
     terminal_text.insert(tk.END, "#                                                                   #\n")
     terminal_text.insert(tk.END, "#      Don't forget to make your modded ISO with ImgBurn. ;)        #\n")
     terminal_text.insert(tk.END, "#                                                                   #\n")
-    terminal_text.insert(tk.END, "#      It's recommended you run the Full Sync option in the         #\n")
-    terminal_text.insert(tk.END, "#   Textures Updater utility now for a deep inspection that will    #\n")
+    terminal_text.insert(tk.END, "#        It's recommended you restart the app and run the           #\n")
+    terminal_text.insert(tk.END, "#          Full Sync option for a deep inspection that will         #\n")
     terminal_text.insert(tk.END, "#   ensure every file was downloaded and extracted without issue.   #\n")
     terminal_text.insert(tk.END, "#   This shouldn't be necessary, but it can solve issues caused by  #\n")
     terminal_text.insert(tk.END, "#        spotty internet connection or corrupted Zip files.         #\n")

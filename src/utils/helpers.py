@@ -169,6 +169,11 @@ class ConfigManager:
             return True
         else:
             return False
+
+    @initial_setup_done.setter
+    def initial_setup_done(self, value):
+        self.config['initial_setup_done'] = self._convert_to_boolean(value)
+        self.save_config({'initial_setup_done': self._convert_to_boolean(value)})
             
 
 
