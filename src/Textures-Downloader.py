@@ -83,126 +83,100 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         self.master.title(f"{project_name} Textures Updater {app_version}")
         self.master.minsize(900, 720)
 
-        # Create a boolean variable to store the checkbox state of debug_mode
+        # Initialize UI components
         self.debug_mode_var = tk.BooleanVar(value=self.config_manager.debug_mode)
 
-        # Heading
         heading_label = tk.Label(self, text=f"{project_name} Textures Updater", font=('TkDefaultFont', 18, 'bold'))
         heading_label.grid(row=0, column=0, columnspan=3, pady=(10, 10))
 
-        # Configure columns to expand with the window
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
 
-        # Path to Replacements
         tk.Label(self, text="Path to PCSX2\\textures:", justify="left").grid(row=1, column=0, sticky="e", padx=(20, 0), pady=2)
-        local_directory_entry = tk.Entry(self, width=50)
-        local_directory_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=(10, 20), pady=2, ipady=3)
-        local_directory_entry.insert(0, self.config_manager.local_directory)
+        self.local_directory_entry = tk.Entry(self, width=50)
+        self.local_directory_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=(10, 20), pady=2, ipady=3)
+        self.local_directory_entry.insert(0, self.config_manager.local_directory)
 
-
-
-        # Check if Path to Replacements is provided in the config file
         self.path_to_replacements_label = tk.Label(self, text=f"Enter the full path to your emulator's TEXTURES FOLDER and click Save Config. Find this in PCSX2 > Settings > Graphics > Texture Replacements. Copy that path exactly as-is. Example: C:\\Whatever\\PCSX2\\textures", font=('TkDefaultFont', 12), fg="red", justify="left", wraplength=530)
-        if not local_directory:  
+        if not self.config_manager.local_directory:  
             self.path_to_replacements_label.grid(row=2, column=1, columnspan=2, pady=(0, 5), padx=(20, 0), sticky="w")
 
-        # GitHub Token
         tk.Label(self, text="GitHub API Token:", justify="left").grid(row=3, column=0, sticky="e", pady=2)
-        github_token_entry = tk.Entry(self, width=30) 
-        github_token_entry.grid(row=3, column=1, sticky="w", padx=(10, 20), pady=2, ipady=3)
-        github_token_entry.insert(0, github_token)
+        self.github_token_entry = tk.Entry(self, width=30) 
+        self.github_token_entry.grid(row=3, column=1, sticky="w", padx=(10, 20), pady=2, ipady=3)
+        self.github_token_entry.insert(0, self.config_manager.github_token)
 
-        # Check if Github Token is provided in the config file
         self.github_token_label = tk.Label(self, text=f"Log in to Github.com and go to Settings > Developer Settings > Personal Access Tokens", font=('TkDefaultFont', 11), fg="red", justify="left", wraplength=250)
-        if not github_token: 
+        if not self.config_manager.github_token: 
             self.github_token_label.grid(row=4, column=1, columnspan=2, pady=(0, 5), padx=(20, 0), sticky="w")
         
-        # Last Run Date
         last_run_date_label = tk.Label(self, text="Last Sync Date:", justify="right")
         last_run_date_label.grid(row=5, column=0, sticky="e", pady=2)
-        last_run_date_entry = tk.Entry(self, width=30)
-        last_run_date_entry.grid(row=5, column=1, sticky="w", padx=(10, 20), pady=2, ipady=3)
+        self.last_run_date_entry = tk.Entry(self, width=30)
+        self.last_run_date_entry.grid(row=5, column=1, sticky="w", padx=(10, 20), pady=2, ipady=3)
 
-        # Check if last_run_date is provided and in the correct format
+        last_run_date = self.config_manager.last_run_date
         if last_run_date:
             try:
-                # Check if the value looks like a datetime string and convert it
-                last_run_date_entry.insert(0, last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+                self.last_run_date_entry.insert(0, last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
             except ValueError:
-                # Handle the case where the value is not a valid datetime
                 default_last_run_date = datetime(2005, 7, 11, 0, 0, 0)
-                last_run_date_entry.insert(0, default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+                self.last_run_date_entry.insert(0, default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
                 save_config_new({'last_run_date': default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')})
         else:
-            # Handle the case where last_run_date is not provided
             default_last_run_date = datetime(2005, 7, 11, 0, 0, 0)
-            last_run_date_entry.insert(0, default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+            self.last_run_date_entry.insert(0, default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
             save_config_new({'last_run_date': default_last_run_date.strftime('%Y-%m-%d %H:%M:%S.%f')})
-        
-        # Create a StringVar for initial_setup_done because it doesn't have an entry field
+
         initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
 
-        # Read the config for the value 
-        # initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
-
-        # Save Button
         config_dict_main = {
-            "local_directory": local_directory_entry,
-            "github_token": github_token_entry,
-            "last_run_date": last_run_date_entry,
-            # "initial_setup_done": initial_setup_var,
+            "local_directory": self.local_directory_entry,
+            "github_token": self.github_token_entry,
+            "last_run_date": self.last_run_date_entry,
         }
         save_button_on_main = tk.Button(self, text="Save Configuration", command=lambda: self.on_save_button_click(config_dict_main, save_button_on_main, self), justify="left", width=20, cursor="hand2")
         save_button_on_main.grid(row=3, column=2, rowspan=4, pady=20, padx=(0, 60))
 
-        # Divider
         ttk.Separator(self, orient="horizontal").grid(row=7, column=0, columnspan=3, pady=5, sticky="ew")
 
-
-        # Choose an Option Section
         tk.Label(self, text="Would you like to only check for files in Github that are new or have changed\nsince your last sync date or would you like to do a full sync of the entire repo?", font=('TkDefaultFont', 13, 'bold')).grid(row=8, column=0, columnspan=3, pady=(5, 5))
        
-        # Create a frame for the radio button options
         radio_buttons = tk.Frame(self)
-        radio_buttons.grid(row=9, column=0, columnspan=3, pady=(3, 5), padx=(0, 0), sticky="n")  # Adjust the pady values as needed
+        radio_buttons.grid(row=9, column=0, columnspan=3, pady=(3, 5), padx=(0, 0), sticky="n") 
 
-        # Your radio buttons can be added here. For example:
-        self.user_choice_var = tk.IntVar(value=1)  # Set the default value to 1
+        self.user_choice_var = tk.IntVar(value=1)  
         tk.Radiobutton(radio_buttons, text="Download New Content (recommended)", variable=self.user_choice_var, value=1).grid(row=0, column=0, sticky="e", padx=(0, 10))
         tk.Radiobutton(radio_buttons, text="Full Sync (slower, but can fix issues)", variable=self.user_choice_var, value=2).grid(row=0, column=1, sticky="w", padx=(50, 0))
 
-
-        # Create a PanedWindow for resizable terminal window
         terminal_paned = tk.PanedWindow(self, orient=tk.VERTICAL, sashwidth=5, sashrelief=tk.SUNKEN)
         terminal_paned.grid(row=11, column=0, columnspan=3, padx=10, pady=5, sticky="nsew")
 
-        # Add a Text widget for the terminal with vertical scrollbar
         self.terminal_frame = tk.Frame(self)
         self.terminal_text = tk.Text(self.terminal_frame, height=15, width=120, wrap=tk.WORD, padx=10, pady=10)
         scrollbar = tk.Scrollbar(self.terminal_frame, command=self.terminal_text.yview)
         self.terminal_text.configure(yscrollcommand=scrollbar.set)
 
-        # Pack the widgets
         self.terminal_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.terminal_frame.grid(row=11, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
        
-        # Insert the warning text
-        self.terminal_text.insert(tk.END, "!!! ATTENTION !!! This Run Sync tool is only intented to be used for updates AFTER you have completed the initial installation. If you are attemping to do a first time download/install of the textures pack, click the 'Fresh Install' button at the bottom right of this screen.\n")
-        self.terminal_text.yview(tk.END)  # Scroll to the end to make the new text visible
-
-
+        self.terminal_text.insert(tk.END, "!!! ATTENTION !!! This Run Sync tool is only intended to be used for updates AFTER you have completed the initial installation. If you are attempting to do a first-time download/install of the textures pack, click the 'Fresh Install' button at the bottom right of this screen.\n")
+        self.terminal_text.yview(tk.END)  
 
         tk.Label(self, text="PUT ALL OF YOUR CUSTOM TEXTURES AND DLC FILES\nIN 'user-customs' OR THEY WILL BE DELETED!", font=('TkDefaultFont', 13, 'bold'), fg="red", justify="left").grid(row=12, column=0, columnspan=2, pady=(0, 0))
-        tk.Label(self, text="When using custom files, leave the default textures in place and\ndisable them by prepending the name with a dash (eg. '-file.png').", font=('TkDefaultFont', 12), justify="left").grid(row=13, column=0, columnspan=2,  padx=(20, 0), pady=(0, 5))
+        tk.Label(self, text="When using custom files, leave the default textures in place and\ndisable them by prepending the name with a dash (eg. '-file.png').", font=('TkDefaultFont', 12), justify="left").grid(row=13, column=0, columnspan=2, padx=(20, 0), pady=(0, 5))
 
-        user_choice = "full_scan" if self.user_choice_var.get() == 2 else "only_new_content"
         def main_sync_wrapper(event):
+            user_choice = "full_scan" if self.user_choice_var.get() == 2 else "only_new_content"
+            github_token = self.github_token_entry.get()
+            last_run_date = self.last_run_date_entry.get()
+
             self.terminal_text.delete(1.0, tk.END)
-            thread = Thread(target=main_sync, args=(user_choice, self.terminal_text))
+            thread = Thread(target=main_sync, args=(user_choice, self.terminal_text, github_token, last_run_date))
             thread.start()
+
         
 
 
