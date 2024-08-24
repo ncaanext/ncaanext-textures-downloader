@@ -104,7 +104,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         # Check if Path to Replacements is provided in the config file
         self.path_to_replacements_label = tk.Label(self, text=f"Enter the full path to your emulator's TEXTURES FOLDER and click Save Config. Find this in PCSX2 > Settings > Graphics > Texture Replacements. Copy that path exactly as-is. Example: C:\\Whatever\\PCSX2\\textures", font=('TkDefaultFont', 12), fg="red", justify="left", wraplength=530)
         if not local_directory:  
-            self.path_to_replacements_label.grid(row=2, column=1, columnspan=2, pady=(0, 10), padx=(20, 0), sticky="w")
+            self.path_to_replacements_label.grid(row=2, column=1, columnspan=2, pady=(0, 5), padx=(20, 0), sticky="w")
 
         # GitHub Token
         tk.Label(self, text="GitHub API Token:", justify="left").grid(row=3, column=0, sticky="e", pady=2)
@@ -115,7 +115,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         # Check if Github Token is provided in the config file
         self.github_token_label = tk.Label(self, text=f"Log in to Github.com and go to Settings > Developer Settings > Personal Access Tokens", font=('TkDefaultFont', 11), fg="red", justify="left", wraplength=250)
         if not github_token: 
-            self.github_token_label.grid(row=4, column=1, columnspan=2, pady=(0, 10), padx=(20, 0), sticky="w")
+            self.github_token_label.grid(row=4, column=1, columnspan=2, pady=(0, 5), padx=(20, 0), sticky="w")
         
         # Last Run Date
         last_run_date_label = tk.Label(self, text="Last Sync Date:", justify="right")
@@ -142,18 +142,21 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         # Create a StringVar for initial_setup_done because it doesn't have an entry field
         initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
 
+        # Read the config for the value 
+        # initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
+
         # Save Button
         config_dict_main = {
             "local_directory": local_directory_entry,
             "github_token": github_token_entry,
             "last_run_date": last_run_date_entry,
-            "initial_setup_done": initial_setup_var,
+            # "initial_setup_done": initial_setup_var,
         }
         save_button_on_main = tk.Button(self, text="Save Configuration", command=lambda: self.on_save_button_click(config_dict_main, save_button_on_main, self), justify="left", width=20, cursor="hand2")
         save_button_on_main.grid(row=3, column=2, rowspan=4, pady=20, padx=(0, 60))
 
         # Divider
-        ttk.Separator(self, orient="horizontal").grid(row=7, column=0, columnspan=3, pady=15, sticky="ew")
+        ttk.Separator(self, orient="horizontal").grid(row=7, column=0, columnspan=3, pady=5, sticky="ew")
 
 
         # Choose an Option Section
@@ -161,7 +164,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
        
         # Create a frame for the radio button options
         radio_buttons = tk.Frame(self)
-        radio_buttons.grid(row=9, column=0, columnspan=3, pady=(3, 10), padx=(0, 0), sticky="n")  # Adjust the pady values as needed
+        radio_buttons.grid(row=9, column=0, columnspan=3, pady=(3, 5), padx=(0, 0), sticky="n")  # Adjust the pady values as needed
 
         # Your radio buttons can be added here. For example:
         self.user_choice_var = tk.IntVar(value=1)  # Set the default value to 1
@@ -171,11 +174,11 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
         # Create a PanedWindow for resizable terminal window
         terminal_paned = tk.PanedWindow(self, orient=tk.VERTICAL, sashwidth=5, sashrelief=tk.SUNKEN)
-        terminal_paned.grid(row=11, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
+        terminal_paned.grid(row=11, column=0, columnspan=3, padx=10, pady=5, sticky="nsew")
 
         # Add a Text widget for the terminal with vertical scrollbar
         self.terminal_frame = tk.Frame(self)
-        self.terminal_text = tk.Text(self.terminal_frame, height=17, width=120, wrap=tk.WORD, padx=10, pady=10)
+        self.terminal_text = tk.Text(self.terminal_frame, height=15, width=120, wrap=tk.WORD, padx=10, pady=10)
         scrollbar = tk.Scrollbar(self.terminal_frame, command=self.terminal_text.yview)
         self.terminal_text.configure(yscrollcommand=scrollbar.set)
 
@@ -374,6 +377,8 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             largest_size_gb = json_data.get("temp_size")
             
 
+            self.terminal_text.insert(tk.END, f"!!! FOR 1st INSTALL ONLY. ATTENTION !!! This screen is only for installing the textures for the first time. If you already have the textures installed, to update them, click the 'Post-Install Updater' button at the bottom right of this page.")
+            self.terminal_text.insert(tk.END, f"\n\n")
             self.terminal_text.insert(tk.END, f"Internet connection test passed. Remote JSON data retrieved. Ready to proceed.")
             # self.terminal_text.insert(tk.END, json_data)
             self.terminal_text.see(tk.END)  # Scroll to the end
@@ -400,14 +405,13 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         hyperlink_label.bind("<Button-1>", open_hyperlink)
 
         # Body copy
-        description_text = "This utility will download all of the required textures packs and extract them in the proper order into your emulator's textures folder. This is a very large download and requires multiple GBs of free disk space  (see below for details). Don't proceed unless you have the necessary space and the time to leave this window open to complete the downloads. Depending on your internet speed, this could take up to a few hours." 
+        description_text = "This will download and install all of the required textures for this mod. This could take up to a few hours." 
         description = tk.Label(self, text=description_text, justify=tk.LEFT, wraplength=750)
         description.grid(row=3, column=0, columnspan=3, pady=(0,10))
 
         # Path to Replacements
-        local_directory_entry_first_label = tk.Label(self, text="Enter the full path to your emulator's TEXTURES FOLDER, click Save Config, and restart this app.", font=('TkDefaultFont', 13, 'bold'), justify="center").grid(row=4, column=0, columnspan=3, sticky="n", padx=(0, 0))
+        local_directory_entry_first_label = tk.Label(self, text="Enter the full path to your emulator's TEXTURES FOLDER and Github Token, click Save Config, and restart this app.", font=('TkDefaultFont', 13, 'bold'), justify="center").grid(row=4, column=0, columnspan=3, sticky="n", padx=(0, 0))
         local_directory_entry_first_label2 = tk.Label(self, text="Find this in PCSX2 > Settings > Graphics > Texture Replacements.", font=('TkDefaultFont', 13), justify="center").grid(row=5, column=0, columnspan=3, sticky="n", padx=(0, 0))
-        local_directory_entry_first_label3 = tk.Label(self, text=r"Copy that path exactly as-is. Example: C:\Whatever\PCSX2\textures", font=('TkDefaultFont', 13), justify="center").grid(row=6, column=0, columnspan=3, sticky="n", padx=(0, 0))
         
 
         # Create a frame for input and button
@@ -426,7 +430,7 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         local_directory_entry_first.insert(0, local_directory)
         
         # Check if Path to Textures is provided in the config file
-        self.path_to_replacements_label = tk.Label(input_frame, text=f"Enter the full path to TEXTURES FOLDER. Example: C:\\Whatever\\PCSX2\\textures", font=('TkDefaultFont', 12), fg="red", justify="left", wraplength=450)
+        self.path_to_replacements_label = tk.Label(input_frame, text=f"Enter the full path to TEXTURES FOLDER. Example: C:\\PCSX2\\textures", font=('TkDefaultFont', 12), fg="red", justify="left", wraplength=450)
         if not local_directory:  
             self.path_to_replacements_label.grid(row=1, column=1, columnspan=2, pady=(0, 10), padx=(5, 0), sticky="w")
 
@@ -439,7 +443,7 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         # Check if Github Token is provided in the config file
         self.github_token_label = tk.Label(input_frame, text=f"An API token is required. Log in (or create a free account) to Github.com and go to (profile pic at top right) > Settings > Developer Settings > Personal Access Tokens.", font=('TkDefaultFont', 11), fg="red", justify="left", wraplength=450)
         if not github_token: 
-            self.github_token_label.grid(row=3, column=1, columnspan=2, pady=(0, 10), padx=(5, 0), sticky="w")
+            self.github_token_label.grid(row=3, column=1, columnspan=2, pady=(0, 0), padx=(5, 0), sticky="w")
         
         # Create a StringVar for initial_setup_done because it doesn't have an entry field
         initial_setup_var = tk.StringVar(value="False")  # Set the initial value as needed
@@ -507,11 +511,11 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
             # Display the message below the button
             message_label = tk.Label(button_frame, text=message)
-            message_label.grid(row=2, column=0, pady=(5, 20))
+            message_label.grid(row=2, column=0, pady=(5, 5))
 
 
             # Divider
-            ttk.Separator(self, orient="horizontal").grid(row=10, column=0, columnspan=3, pady=15, sticky="ew") 
+            ttk.Separator(self, orient="horizontal").grid(row=10, column=0, columnspan=3, pady=5, sticky="ew") 
 
 
 

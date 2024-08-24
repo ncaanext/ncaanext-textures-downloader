@@ -12,6 +12,8 @@ import shutil
 import argparse
 import tkinter as tk 
 import threading
+import traceback
+
 
 from .helpers import *
 from .fullscan import *
@@ -260,7 +262,7 @@ def main_sync(user_choice, terminal_text):
                                         if os.path.exists(file_path):
                                             # Compute the local hash
                                             if debug_mode == True:
-                                                terminal_text.insert(tk.END, f"  Hash check file path: {file_path}\n")
+                                                terminal_text.insert(tk.END, f"\n  Hash check file path: {file_path}\n")
                                             local_file_hash = compute_local_file_hash(file_path, debug_mode)
                                             # Compare local hash to github file hash
                                             if debug_mode == True:
@@ -380,157 +382,179 @@ def main_sync(user_choice, terminal_text):
                                     old_file_relative_path = os.path.relpath(file_info['previous_filename'], start=subdirectory)
                                     old_file_path = os.path.join(local_path, old_file_relative_path)
                                     new_file_path = file_path
+                                    new_file_dir = os.path.dirname(new_file_path)
 
                                     # Info on what happened in the commit
                                     if debug_mode == 'True':
                                         terminal_text.insert(tk.END, f"    In commit, {old_file_relative_path} renamed to {relative_path}.\n")
                                         scroll_terminal()
-                                    # Check if the file is has already been processed
-                                    if file_path in finished_files_set:
-                                        # Add the old name if it's not already in the set
-                                        terminal_text.insert(tk.END, f"    Skipping because new or old path already processed in a newer commit.\n")
-                                        scroll_terminal()
-                                        if debug_mode == 'True':
-                                                terminal_text.insert(tk.END, f"    Adding old path to the finished_files_set. New path was already there.\n")
-                                                scroll_terminal()
-                                        add_to_finished_files_set(old_file_path)  
-                                        scroll_terminal()
-                                        continue 
+                                    
+                                    try:
 
-                                    # Check if activity was all outside of the subdirectory and skip to next file if so
-                                    if debug_mode == 'True':
-                                        terminal_text.insert(tk.END, "    Checking if all activity was outside of specified directory by seeing if relative_paths both start with '..'.\n")
-                                        terminal_text.insert(tk.END, f"    New path: {relative_path}\n")
-                                        terminal_text.insert(tk.END, f"    Old Path: {old_file_relative_path}\n")
-                                        scroll_terminal()
-                                    # Checking both old and new file names 
-                                    if relative_path.startswith('..') or os.path.isabs(relative_path):
+                                        # Check if the file is has already been processed
+                                        if file_path in finished_files_set:
+                                            # Add the old name if it's not already in the set
+                                            terminal_text.insert(tk.END, f"    Skipping because new or old path already processed in a newer commit.\n")
+                                            scroll_terminal()
+                                            if debug_mode == 'True':
+                                                    terminal_text.insert(tk.END, f"    Adding old path to the finished_files_set. New path was already there.\n")
+                                                    scroll_terminal()
+                                            add_to_finished_files_set(old_file_path)  
+                                            scroll_terminal()
+                                            continue 
+
+                                        # Check if activity was all outside of the subdirectory and skip to next file if so
+                                        if debug_mode == 'True':
+                                            terminal_text.insert(tk.END, "    Checking if all activity was outside of specified directory by seeing if relative_paths both start with '..'.\n")
+                                            terminal_text.insert(tk.END, f"    New path: {relative_path}\n")
+                                            terminal_text.insert(tk.END, f"    Old Path: {old_file_relative_path}\n")
+                                            scroll_terminal()
+                                        # Checking both old and new file names 
+                                        if relative_path.startswith('..') or os.path.isabs(relative_path):
+                                            if old_file_relative_path.startswith('..') or os.path.isabs(old_file_relative_path):
+                                                terminal_text.insert(tk.END, f"    Old name and new name outside of specified subdirectory. Skipping file.\n")
+                                                scroll_terminal()
+                                                continue
+                                        else:
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, "    One or both of the old/new filenames are inside the specified subdirectory. Proceeding...\n")
+
+
+                                        # Check if new file name is outside of the subdirectory, and if so, just delete the local file instead of moving it
+                                        if debug_mode == 'True':
+                                            terminal_text.insert(tk.END, "    Checking if the new/desination file name is outside of the specified subdirectory by seeing if its relative path starts with '..'.\n")
+                                            terminal_text.insert(tk.END, f"    New path: {relative_path}\n")
+                                            scroll_terminal()
+                                        # Checking new file name
+                                        if relative_path.startswith('..') or os.path.isabs(relative_path):
+                                            if debug_mode:
+                                                terminal_text.insert(tk.END, f"    New name is outside of specified directory. Looking for the old file...\n")
+                                            # terminal_text.update_idletasks()
+                                            # terminal_text.after(100)
+                                            # Check if old file exists
+                                            if os.path.exists(old_file_path):
+                                                if debug_mode:
+                                                    terminal_text.insert(tk.END, f"    Found the old name file Deleting...\n")
+                                                os.remove(old_file_path)
+                                                counter_files_deleted += 1
+                                                terminal_text.insert(tk.END, f"    Deleted {file_info['previous_filename']}\n")
+                                            else:
+                                                terminal_text.insert(tk.END, f"    File has already been deleted locally.\n")
+                                                terminal_text.yview(tk.END) 
+                                                terminal_text.see(tk.END)
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                            add_to_finished_files_set(old_file_path)  
+                                            add_to_finished_files_set(new_file_path)  
+
+                                            # terminal_text.update_idletasks()
+                                            # terminal_text.after(100)
+                                            continue
+
+
+                                        # Check if new old name is outside of the subdirectory, and if so, download the new name file
+                                        if debug_mode == 'True':
+                                            terminal_text.insert(tk.END, "    Checking if the old file name is outside of the specified subdirectory by seeing if its relative path starts with '..'.\n")
+                                            terminal_text.insert(tk.END, f"    Old path: {old_file_path}\n")
+                                            scroll_terminal()
+                                        # Checking new file name
                                         if old_file_relative_path.startswith('..') or os.path.isabs(old_file_relative_path):
-                                            terminal_text.insert(tk.END, f"    Old name and new name outside of specified subdirectory. Skipping file.\n")
+                                            if debug_mode:
+                                                terminal_text.insert(tk.END, f"    Old name is outside of specified directory. Downloading the new file.\n")
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                            add_to_finished_files_set(old_file_path)  
+                                            add_to_finished_files_set(new_file_path)  
+                                            counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+                                            scroll_terminal()
+
+                                            terminal_text.update_idletasks()
+                                            terminal_text.after(100)
+                                            continue
+
+                                        # Check for the old filename to see if file exists
+                                        if os.path.exists(old_file_path):
+                                            # File with the old name exists, rename it to the new name
+
+                                            # create directory if needed
+                                            if not os.path.exists(new_file_dir):
+                                              try:
+                                                  os.makedirs(new_file_dir)
+                                                  terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
+                                                  scroll_terminal()
+                                              except Exception as e:
+                                                  terminal_text.insert(tk.END, f"    ERROR creating directories: {e}\n")
+                                                  terminal_text.insert(tk.END, traceback.format_exc())
+                                                  scroll_terminal()
+                                                  continue
+                                                
+                                            terminal_text.insert(tk.END, f"    Attempting to rename file...\n")
+                                            os.rename(old_file_path, new_file_path)
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                            add_to_finished_files_set(old_file_path)  
+                                            add_to_finished_files_set(new_file_path)  
+                                            terminal_text.insert(tk.END, f"    Renamed: {file_info['previous_filename']} to {relative_path}\n")
                                             scroll_terminal()
                                             continue
-                                    else:
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, "    One or both of the old/new filenames are inside the specified subdirectory. Proceeding...\n")
-
-
-                                    # Check if new file name is outside of the subdirectory, and if so, just delete the local file instead of moving it
-                                    if debug_mode == 'True':
-                                        terminal_text.insert(tk.END, "    Checking if the new/desination file name is outside of the specified subdirectory by seeing if its relative path starts with '..'.\n")
-                                        terminal_text.insert(tk.END, f"    New path: {relative_path}\n")
-                                        scroll_terminal()
-                                    # Checking new file name
-                                    if relative_path.startswith('..') or os.path.isabs(relative_path):
-                                        if debug_mode:
-                                            terminal_text.insert(tk.END, f"    New name is outside of specified directory. Looking for the old file...\n")
-                                        # terminal_text.update_idletasks()
-                                        # terminal_text.after(100)
-                                        # Check if old file exists
-                                        if os.path.exists(old_file_path):
-                                            if debug_mode:
-                                                terminal_text.insert(tk.END, f"    Found the old name file Deleting...\n")
-                                            os.remove(old_file_path)
-                                            counter_files_deleted += 1
-                                            terminal_text.insert(tk.END, f"    Deleted {file_info['previous_filename']}\n")
-                                        else:
-                                            terminal_text.insert(tk.END, f"    File has already been deleted locally.\n")
-                                            terminal_text.yview(tk.END) 
-                                            terminal_text.see(tk.END)
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                        add_to_finished_files_set(old_file_path)  
-                                        add_to_finished_files_set(new_file_path)  
-
-                                        # terminal_text.update_idletasks()
-                                        # terminal_text.after(100)
-                                        continue
-
-
-                                    # Check if new old name is outside of the subdirectory, and if so, download the new name file
-                                    if debug_mode == 'True':
-                                        terminal_text.insert(tk.END, "    Checking if the old file name is outside of the specified subdirectory by seeing if its relative path starts with '..'.\n")
-                                        terminal_text.insert(tk.END, f"    Old path: {old_file_path}\n")
-                                        scroll_terminal()
-                                    # Checking new file name
-                                    if old_file_relative_path.startswith('..') or os.path.isabs(old_file_relative_path):
-                                        if debug_mode:
-                                            terminal_text.insert(tk.END, f"    Old name is outside of specified directory. Downloading the new file.\n")
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                        add_to_finished_files_set(old_file_path)  
-                                        add_to_finished_files_set(new_file_path)  
-                                        counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
-                                        scroll_terminal()
-
-                                        terminal_text.update_idletasks()
-                                        terminal_text.after(100)
-                                        continue
-
-                                    # Check for the old filename to see if file exists
-                                    if os.path.exists(old_file_path):
-                                        # File with the old name exists, rename it to the new name
-                                        os.rename(old_file_path, new_file_path)
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                        add_to_finished_files_set(old_file_path)  
-                                        add_to_finished_files_set(new_file_path)  
-                                        terminal_text.insert(tk.END, f"    Renamed: {file_info['previous_filename']} to {relative_path}\n")
-                                        scroll_terminal()
-                                        continue
-                                    
-
-                                    # Check for a disabled/prepended version of the old filename
-                                    directory, filename = os.path.split(old_file_path)
-                                    # Add a dash before the final segment (filename or folder)
-                                    modified_old_filename = '-' + filename
-                                    # Join the directory and modified filename to get the new path
-                                    old_file_path_prepended = os.path.join(directory, modified_old_filename)
-                                    # Check if disabled/prepended version exists
-                                    if os.path.exists(old_file_path_prepended):
-                                        # disabled/prepended File with the old name exists, rename it to the new name
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Old file name doesn't exist, but a disabled/prepended file with the old name exists. Renaming it to the new name...\n")
-                                        os.rename(old_file_path_prepended, new_file_path)
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                        add_to_finished_files_set(old_file_path)  
-                                        add_to_finished_files_set(new_file_path)  
-                                        terminal_text.insert(tk.END, f"    Renamed: {modified_old_filename} version of to {relative_path}\n")
-                                        scroll_terminal()
-                                        continue
                                         
-                                    # Check for the new filename to see if file exists and if it is current
-                                    elif os.path.exists(new_file_path):
-                                        if not hash_comparison:
-                                            # Download the file and update the counter
-                                            terminal_text.insert(tk.END, f"    Downloading because the version of new file on github is newer.\n")
-                                            counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+
+                                        # Check for a disabled/prepended version of the old filename
+                                        directory, filename = os.path.split(old_file_path)
+                                        # Add a dash before the final segment (filename or folder)
+                                        modified_old_filename = '-' + filename
+                                        # Join the directory and modified filename to get the new path
+                                        old_file_path_prepended = os.path.join(directory, modified_old_filename)
+                                        # Check if disabled/prepended version exists
+                                        if os.path.exists(old_file_path_prepended):
+                                            # disabled/prepended File with the old name exists, rename it to the new name
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, f"    Old file name doesn't exist, but a disabled/prepended file with the old name exists. Renaming it to the new name...\n")
+                                            os.rename(old_file_path_prepended, new_file_path)
                                             if debug_mode == 'True':
                                                 terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
                                             add_to_finished_files_set(old_file_path)  
                                             add_to_finished_files_set(new_file_path)  
+                                            terminal_text.insert(tk.END, f"    Renamed: {modified_old_filename} version of to {relative_path}\n")
+                                            scroll_terminal()
+                                            continue
+                                            
+                                        # Check for the new filename to see if file exists and if it is current
+                                        elif os.path.exists(new_file_path):
+                                            if not hash_comparison:
+                                                # Download the file and update the counter
+                                                terminal_text.insert(tk.END, f"    Downloading because the version of new file on github is newer.\n")
+                                                counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+                                                if debug_mode == 'True':
+                                                    terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                                add_to_finished_files_set(old_file_path)  
+                                                add_to_finished_files_set(new_file_path)  
+                                            else:
+                                                # File with the new name already exists
+                                                if debug_mode == 'True':
+                                                    terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                                add_to_finished_files_set(old_file_path)  
+                                                add_to_finished_files_set(new_file_path)  
+                                                terminal_text.insert(tk.END, f"    Skipping download because already exists with the new name and is current.\n")
+                                            scroll_terminal()
+                                            continue
+                                        
                                         else:
-                                            # File with the new name already exists
+                                            # Download the file  and update the counter
                                             if debug_mode == 'True':
                                                 terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
                                             add_to_finished_files_set(old_file_path)  
                                             add_to_finished_files_set(new_file_path)  
-                                            terminal_text.insert(tk.END, f"    Skipping download because already exists with the new name and is current.\n")
+                                            if debug_mode == 'True':
+                                                terminal_text.insert(tk.END, f"    Downloading because neither the new or old path exist.\n")
+                                            # Proceed to download logic
+                                            counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+                                            scroll_terminal()
+
+                                    except Exception as e:
+                                        terminal_text.insert(tk.END, f"    ERROR processing renamed file: {e}\n")
                                         scroll_terminal()
-                                        continue
-                                    
-                                    else:
-                                        # Download the file  and update the counter
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                        add_to_finished_files_set(old_file_path)  
-                                        add_to_finished_files_set(new_file_path)  
-                                        if debug_mode == 'True':
-                                            terminal_text.insert(tk.END, f"    Downloading because neither the new or old path exist.\n")
-                                        # Proceed to download logic
-                                        counter_files_downloaded = download_file(file_url, file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
-                                        scroll_terminal()
-                                    
+
                                     # terminal_text.update_idletasks()
                                     # terminal_text.after(100)
                                     continue  
@@ -798,7 +822,7 @@ def main_sync(user_choice, terminal_text):
 
     except Exception as e:
         terminal_text.insert(tk.END, "\n")
-        terminal_text.insert(tk.END, f"Error downloading files: {e}\n")
+        terminal_text.insert(tk.END, f"ERROR: {e}\n")
         terminal_text.insert(tk.END, "\n")
         scroll_terminal()
 
