@@ -13,9 +13,11 @@ from utils.helpers import load_config_new, save_config_new, ConfigManager
 from utils.sync import main_sync
 from utils.download_repo import download_repo_main
 
+app_version = "0.1.7-beta"
+
 config_manager = ConfigManager()
 
-# Access co nfiguration variables
+# Access configuration variables
 debug_mode = config_manager.debug_mode
 initial_setup_done = config_manager.initial_setup_done
 local_directory = config_manager.local_directory
@@ -78,7 +80,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         tk.Frame.__init__(self, master)
         self.config_manager = ConfigManager()
 
-        self.master.title(f"{project_name} Textures Updater")
+        self.master.title(f"{project_name} Textures Updater {app_version}")
         self.master.minsize(900, 720)
 
         # Create a boolean variable to store the checkbox state of debug_mode
@@ -309,7 +311,7 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         tk.Frame.__init__(self, master)
         self.config_manager = ConfigManager()
 
-        self.master.title(f"{project_name} Textures Installer")
+        self.master.title(f"{project_name} Textures Installer {app_version}")
         self.master.minsize(900, 800)
 
         # Create a boolean variable to store the checkbox state of debug_mode
