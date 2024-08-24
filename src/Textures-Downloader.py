@@ -372,12 +372,12 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             json_data = response.json()
 
             # About this release
-            version = json_data.get("version")
-            release_date = json_data.get("release_date")
-            release_url = json_data.get("release_url")
-            total_size_gb = json_data.get("total_size")
-            largest_size_gb = json_data.get("temp_size")
-            
+            version = json_data.get("version", "?")
+            release_date = json_data.get("release_date", "Date Unknown")
+            release_url = json_data.get("release_url", "")
+            total_size_gb = json_data.get("total_size", "? GB")
+            largest_size_gb = json_data.get("temp_size", "? GB")
+                        
 
             self.terminal_text.insert(tk.END, f"!!! FOR 1st INSTALL ONLY. ATTENTION !!! This screen is only for installing the textures for the first time. If you already have the textures installed, to update them, click the 'Post-Install Updater' button at the bottom right of this page.")
             self.terminal_text.insert(tk.END, f"\n\n")
@@ -391,6 +391,12 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             self.terminal_text.insert(tk.END, f"Error fetching remote JSON data (debug info: {str(e)})")
             self.terminal_text.see(tk.END)  # Scroll to the end
             self.terminal_text.update()
+            # About this release
+            version = "?"
+            release_date = "Date Unknown"
+            release_url = "#"
+            total_size_gb = "? GB"
+            largest_size_gb = "? GB"
 
         # Heading
         heading_label = tk.Label(self, text="First Time Setup – Textures Installation", font=('TkDefaultFont', 18, 'bold'), justify="center")
