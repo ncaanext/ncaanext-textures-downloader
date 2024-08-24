@@ -480,15 +480,15 @@ def main_sync(user_choice, terminal_text):
                                             if not os.path.exists(new_file_dir):
                                               try:
                                                   os.makedirs(new_file_dir)
-                                                  terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
+                                                  # terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
                                                   scroll_terminal()
                                               except Exception as e:
                                                   terminal_text.insert(tk.END, f"    ERROR creating directories: {e}\n")
                                                   terminal_text.insert(tk.END, traceback.format_exc())
                                                   scroll_terminal()
                                                   continue
-                                                
-                                            terminal_text.insert(tk.END, f"    Attempting to rename file...\n")
+
+                                            # terminal_text.insert(tk.END, f"    Attempting to rename file...\n")
                                             os.rename(old_file_path, new_file_path)
                                             if debug_mode == 'True':
                                                 terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
@@ -505,19 +505,45 @@ def main_sync(user_choice, terminal_text):
                                         modified_old_filename = '-' + filename
                                         # Join the directory and modified filename to get the new path
                                         old_file_path_prepended = os.path.join(directory, modified_old_filename)
+                                        
+                                        # terminal_text.insert(tk.END, f"    Checking if prepended version of old file exists at {old_file_path_prepended}...\n")
+
                                         # Check if disabled/prepended version exists
                                         if os.path.exists(old_file_path_prepended):
-                                            # disabled/prepended File with the old name exists, rename it to the new name
+                                        
+                                            # Ensure the destination directory exists
+                                            new_file_dir = os.path.dirname(new_file_path)
+                                            if not os.path.exists(new_file_dir):
+                                                try:
+                                                    os.makedirs(new_file_dir)
+                                                    # terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
+                                                    scroll_terminal()
+                                                except Exception as e:
+                                                    terminal_text.insert(tk.END, f"    ERROR creating directories: {e}\n")
+                                                    terminal_text.insert(tk.END, traceback.format_exc())
+                                                    scroll_terminal()
+                                                    continue
+                                            
+                                            # Disabled/prepended file with the old name exists, rename it to the new name
                                             if debug_mode == 'True':
-                                                terminal_text.insert(tk.END, f"    Old file name doesn't exist, but a disabled/prepended file with the old name exists. Renaming it to the new name...\n")
-                                            os.rename(old_file_path_prepended, new_file_path)
-                                            if debug_mode == 'True':
-                                                terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                            add_to_finished_files_set(old_file_path)  
-                                            add_to_finished_files_set(new_file_path)  
-                                            terminal_text.insert(tk.END, f"    Renamed: {modified_old_filename} version of to {relative_path}\n")
-                                            scroll_terminal()
-                                            continue
+                                                terminal_text.insert(tk.END, f"    Old file name doesn't exist, but a disabled/prepended file with the old name exists. Renaming it to the new name.\n")
+                                                # terminal_text.insert(tk.END, f"    From: {old_file_path_prepended}\n")
+                                                # terminal_text.insert(tk.END, f"    To: {new_file_path}\n")
+                                                scroll_terminal()
+                                            
+                                            try:
+                                                os.rename(old_file_path_prepended, new_file_path)
+                                                if debug_mode == 'True':
+                                                    terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
+                                                add_to_finished_files_set(old_file_path)  
+                                                add_to_finished_files_set(new_file_path)  
+                                                terminal_text.insert(tk.END, f"    Renamed: {modified_old_filename} version of to {relative_path}\n")
+                                                scroll_terminal()
+                                            except Exception as e:
+                                                terminal_text.insert(tk.END, f"    ERROR in renaming file: {e}\n")
+                                                terminal_text.insert(tk.END, traceback.format_exc())  # Logs the traceback
+                                                scroll_terminal()
+                                                continue
                                             
                                         # Check for the new filename to see if file exists and if it is current
                                         elif os.path.exists(new_file_path):
