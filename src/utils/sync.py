@@ -472,31 +472,51 @@ def main_sync(user_choice, terminal_text):
                                             terminal_text.after(100)
                                             continue
 
-                                        # Check for the old filename to see if file exists
+                                        # Check for the old filename to see if the file exists
                                         if os.path.exists(old_file_path):
-                                            # File with the old name exists, rename it to the new name
+                                            # File with the old name exists, compute the hash and compare it with the GitHub file hash
 
-                                            # create directory if needed
+                                            # Compute the local hash
+                                            if debug_mode == True:
+                                                terminal_text.insert(tk.END, f"\n  Hash check for old file path: {old_file_path}\n")
+                                            local_file_hash = compute_local_file_hash(old_file_path, debug_mode)
+
+                                            # Compare local hash to GitHub file hash
+                                            if debug_mode == True:
+                                                terminal_text.insert(tk.END, f"  Comparing hashes for: {old_file_path}\n")
+                                            hash_comparison = compare_hashes(local_file_hash, file_sha, old_file_path, debug_mode)
+
+                                            if hash_comparison:
+                                                # Hashes match, proceed with renaming the file
+                                                terminal_text.insert(tk.END, f"    Hashes match. Proceeding with renaming the file.\n")
+                                            else:
+                                                # Hashes don't match, download the file
+                                                terminal_text.insert(tk.END, f"    Hashes don't match. Downloading the correct version of the file.\n")
+                                                counter_files_downloaded = download_file(file_url, old_file_path, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+
+                                            # Create directory if needed
                                             if not os.path.exists(new_file_dir):
-                                              try:
-                                                  os.makedirs(new_file_dir)
-                                                  # terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
-                                                  scroll_terminal()
-                                              except Exception as e:
-                                                  terminal_text.insert(tk.END, f"    ERROR creating directories: {e}\n")
-                                                  terminal_text.insert(tk.END, traceback.format_exc())
-                                                  scroll_terminal()
-                                                  continue
+                                                try:
+                                                    os.makedirs(new_file_dir)
+                                                    # terminal_text.insert(tk.END, f"    Created missing directories: {new_file_dir}\n")
+                                                    scroll_terminal()
+                                                except Exception as e:
+                                                    terminal_text.insert(tk.END, f"    ERROR creating directories: {e}\n")
+                                                    terminal_text.insert(tk.END, traceback.format_exc())
+                                                    scroll_terminal()
+                                                    continue
 
-                                            # terminal_text.insert(tk.END, f"    Attempting to rename file...\n")
+                                            # Rename the file
                                             os.rename(old_file_path, new_file_path)
                                             if debug_mode == 'True':
                                                 terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
-                                            add_to_finished_files_set(old_file_path)  
-                                            add_to_finished_files_set(new_file_path)  
+                                            add_to_finished_files_set(old_file_path)
+                                            add_to_finished_files_set(new_file_path)
                                             terminal_text.insert(tk.END, f"    Renamed: {file_info['previous_filename']} to {relative_path}\n")
                                             scroll_terminal()
+
                                             continue
+
                                         
 
                                         # Check for a disabled/prepended version of the old filename
@@ -511,6 +531,24 @@ def main_sync(user_choice, terminal_text):
                                         # Check if disabled/prepended version exists
                                         if os.path.exists(old_file_path_prepended):
                                         
+                                            # Compute the local hash
+                                            if debug_mode == True:
+                                                terminal_text.insert(tk.END, f"\n  Hash check for prepended file path: {old_file_path_prepended}\n")
+                                            local_file_hash = compute_local_file_hash(old_file_path_prepended, debug_mode)
+
+                                            # Compare local hash to GitHub file hash
+                                            if debug_mode == True:
+                                                terminal_text.insert(tk.END, f"  Comparing hashes for: {old_file_path_prepended}\n")
+                                            hash_comparison = compare_hashes(local_file_hash, file_sha, old_file_path_prepended, debug_mode)
+
+                                            if hash_comparison:
+                                                # Hashes match, proceed with renaming the file
+                                                terminal_text.insert(tk.END, f"    Hashes match. Proceeding with renaming the prepended file.\n")
+                                            else:
+                                                # Hashes don't match, download the file
+                                                terminal_text.insert(tk.END, f"    Hashes don't match. Downloading the correct version of the file.\n")
+                                                counter_files_downloaded = download_file(file_url, old_file_path_prepended, counter_files_downloaded, commit_date, debug_mode, hash_comparison)
+                                            
                                             # Ensure the destination directory exists
                                             new_file_dir = os.path.dirname(new_file_path)
                                             if not os.path.exists(new_file_dir):
@@ -530,9 +568,16 @@ def main_sync(user_choice, terminal_text):
                                                 # terminal_text.insert(tk.END, f"    From: {old_file_path_prepended}\n")
                                                 # terminal_text.insert(tk.END, f"    To: {new_file_path}\n")
                                                 scroll_terminal()
-                                            
+
+                                            # Create a path and name for the new prepended file location
+                                            directory_new, filename_new = os.path.split(new_file_path)
+                                            # Add a dash before the final segment (filename or folder)
+                                            modified_new_filename = '-' + filename_new
+                                            # Join the directory and modified filename to get the new path
+                                            new_file_path_prepended = os.path.join(directory_new, modified_new_filename)
+                                                
                                             try:
-                                                os.rename(old_file_path_prepended, new_file_path)
+                                                os.rename(old_file_path_prepended, new_file_path_prepended)
                                                 if debug_mode == 'True':
                                                     terminal_text.insert(tk.END, f"    Adding old and new path to the finished_files_set..\n")
                                                 add_to_finished_files_set(old_file_path)  
