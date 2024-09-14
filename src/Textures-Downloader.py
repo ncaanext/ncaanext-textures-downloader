@@ -13,7 +13,7 @@ from utils.helpers import load_config_new, save_config_new, ConfigManager
 from utils.sync import main_sync
 from utils.download_repo import download_repo_main
 
-app_version = "0.1.7-beta"
+app_version = "0.1.8-beta"
 
 config_manager = ConfigManager()
 
