@@ -41,23 +41,86 @@ repo_tree_path = "utils/repo_directory_tree.txt"
 dry_run = False
 
 
+def get_tree_contents(owner, repo, subdirectory='', sha=branch_name):
 
-def get_tree_contents(owner, repo, subdirectory='', branch_name='main'):
-    url = f'https://api.github.com/repos/{owner}/{repo}/git/trees/{branch_name}?recursive=1'
-    headers = {'Authorization': f'token {github_token}'}
-    response = requests.get(url, headers=headers)
+    # Initialize the array to hold the tree data
+    tree_data = []
 
-    if response.status_code != 200:
-        # Handle error as needed
-        print(response.json())
-        print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}. \nAPI rate limit probably exceeded. Try again later. The limit resets every hour. You can see the exact reset time above at the beginning of this output.\n")
-        print("Terminating the process. Hasta la vista, baby.\n")
-        sys.exit(1)
+    # Initialize the parent directory variable to keep track of full paths
+    parent_directory = ""
 
-    tree_data = response.json().get('tree', [])
+    # if file_paths_repo is None:
+        # file_paths_repo = []
 
+    def fetch_tree(owner, repo, parent_directory, subdirectory='', sha=branch_name, recursive=''):
+
+        # Ensure subdirectory always ends with a path separator
+        if parent_directory!= '':
+            parent_directory = os.path.normpath(parent_directory)
+            if not parent_directory.endswith(os.sep):
+              parent_directory += os.sep
+        # print(f"Parent directory before fetching response is: {parent_directory}")  # Debugging
+
+        url = f'https://api.github.com/repos/{owner}/{repo}/git/trees/{sha}{recursive}'
+        # print(f"Fetching response with URL: {url}\n") # Debugging
+        headers = {'Authorization': f'Bearer {github_token}', 'X-GitHub-Api-Version': '2022-11-28'}
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            # Handle error as needed
+            print(response.json())
+            print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}. \nAPI rate limit probably exceeded. Try again later. The limit resets every hour. You can see the exact reset time above at the beginning of this output.\n")
+            print("Terminating the process. Hasta la vista, baby.\n")
+            sys.exit(1)
+
+        fetched_response = response.json().get('tree', [])
+        fetched_response_is_truncated = response.json().get('truncated')
+
+        if fetched_response_is_truncated == False:
+            # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
+            # print(f"Tree IS NOT truncated")  # Debugging
+            # print(f"Parent directory is: {parent_directory}")  # Debugging
+            for item in fetched_response:  # Ensure each item is appended
+                full_path = os.path.join(parent_directory, item['path'])
+                item['path'] = full_path
+                tree_data.append(item)
+            # print(f"Appended tree_data with fetched_response.")  # Debugging
+
+            return fetched_response, fetched_response_is_truncated
+
+        if fetched_response_is_truncated == True:
+            
+            # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
+            # print(f"Tree IS truncated")  # Debugging
+            # print(f"Parent directory is: {parent_directory}")  # Debugging
+            # print(f"{fetched_response}")  # Debugging
+
+            # Fetch the tree non-recursively
+            fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, parent_directory, subdirectory, sha)
+            
+            # print(f"\nFetched response without recursive: {fetched_response}\n")  # Debugging
+            # print(f"Fetched response without recursive. Looping though the sha's...")  # Debugging
+
+            # Loop through all of the hashes in the non-recursive tree and run the recursive fetch on each one
+            for item in fetched_response:
+                full_path = os.path.join(parent_directory, item['path'])  # Keep track of full path
+                if item['type'] == 'tree':
+                    # print(f"SHA is tree. Fetching recursive response for sha {item['path']}")  # Debugging
+                    fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, full_path, '', item['sha'], '?recursive=1')
+                elif item['type'] == 'blob':
+                    # print(f"SHA is blob. Appending tree_data for sha {item['path']}")  # Debugging
+                    item['path'] = full_path
+                    tree_data.append(item)
+
+            return fetched_response, fetched_response_is_truncated
+
+
+    # Fetch the root tree recursively
+    fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, '', subdirectory, branch_name, '?recursive=1')
+    
+    # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n Final tree_data: {tree_data}\n")  # Debugging
+    # print(f"\nDone. Returning tree_data.\n")  # Debugging
     return tree_data
-
 
 def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo=None, subdirectory=''):
     if file_paths_repo is None:
@@ -72,6 +135,9 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
     for item in tree_data:
         # Normalize the item path
         item_path = os.path.normpath(item['path'])
+        # print(f"Comparing Item path:\n{item_path}")  # Debugging
+        # print(f"To see if starts with:\n{os.path.join(current_path, subdirectory)}\n\n")  # Debugging
+
         if item['type'] == 'tree':
             # If it's a directory, recursively call the function
             save_repo_directory_tree_to_file(item.get('contents', []), os.path.join(current_path, item_path), file_paths_repo, subdirectory)
@@ -81,6 +147,119 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
                 file_paths_repo.append(os.path.join(current_path, item_path[len(subdirectory):].lstrip(os.sep).lstrip(os.path.sep)))
 
     return file_paths_repo
+
+
+# def get_tree_contents(owner, repo, subdirectory=subdirectory, branch_name=branch_name, github_token=github_token):
+#     headers = {
+#         'Authorization': f'Bearer {github_token}',
+#         'X-GitHub-Api-Version': '2022-11-28'
+#     }
+
+#     def fetch_tree(sha, recursive=True):
+#         # Fetch the tree for a specific SHA with optional recursion
+#         tree_url = f'https://api.github.com/repos/{owner}/{repo}/git/trees/{sha}'
+#         if recursive:
+#             tree_url += '?recursive=1'
+        
+#         print(f"Fetching tree from URL: {tree_url}")  # Debugging
+#         response = requests.get(tree_url, headers=headers)
+#         print(f"Response status code: {response.status_code}")  # Debugging
+        
+#         if response.status_code != 200:
+#             print(response.json())
+#             print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}. \nAPI rate limit probably exceeded. Try again later.\n")
+#             sys.exit(1)
+        
+#         return response.json()
+
+#     def handle_directory_contents(sha):
+#         # Fetch the tree for a specific SHA
+#         tree_data = fetch_tree(sha, recursive=False)
+#         contents = tree_data.get('tree', [])
+        
+#         # Print the contents for debugging
+#         print(f"Fetched contents for SHA {sha}: {contents}")  # Debugging
+        
+#         expanded_contents = []
+#         directories = [item for item in contents if item['type'] == 'tree']
+#         files = [item for item in contents if item['type'] != 'tree']
+        
+#         # Fetch contents of subdirectories manually
+#         for directory in directories:
+#             print(f"Fetching directory contents for: {directory['path']}")  # Debugging
+#             subdirectory_contents = handle_directory_contents(directory['sha'])
+#             expanded_contents.extend(subdirectory_contents)
+        
+#         expanded_contents.extend(files)
+#         return expanded_contents
+
+#     # Fetch the root tree (main branch or other specified branch) with recursion
+#     print(f"Fetching root tree for branch: {branch_name}")  # Debugging
+#     root_data = fetch_tree(branch_name, recursive=True)
+#     tree_contents = root_data.get('tree', [])
+    
+#     # Print the root data for debugging
+#     print(f"Root data: {root_data}")  # Debugging
+    
+#     # Optionally filter by subdirectory
+#     if subdirectory:
+#         # Fetch the subdirectory tree recursively if specified
+#         print(f"Filtering contents by subdirectory: {subdirectory}")  # Debugging
+#         subdirectory_sha = None
+#         for item in tree_contents:
+#             if item['path'] == subdirectory and item['type'] == 'tree':
+#                 subdirectory_sha = item['sha']
+#                 break
+        
+#         if subdirectory_sha:
+#             tree_contents = fetch_tree(subdirectory_sha, recursive=True).get('tree', [])
+#         else:
+#             print(f"Subdirectory {subdirectory} not found.")
+#             tree_contents = []
+#     else:
+#         # If no subdirectory is specified, fetch all contents recursively
+#         tree_contents = fetch_tree(branch_name, recursive=True).get('tree', [])
+    
+#     # Print final tree contents for debugging
+#     print(f"Final tree contents: {tree_contents}")  # Debugging
+    
+#     return tree_contents
+
+
+
+
+
+
+
+
+# def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo=None, subdirectory=''):
+#     if file_paths_repo is None:
+#         print(f"file_paths_repo is none.")  # Debugging
+#         file_paths_repo = []
+
+#     # Ensure subdirectory always ends with a path separator
+#     subdirectory = os.path.normpath(subdirectory)
+#     if not subdirectory.endswith(os.sep):
+#         subdirectory += os.sep
+
+
+#     for item in tree_data:
+#         print(f"Processing item in tree_data.")  # Debugging
+#         # Normalize the item path
+#         item_path = os.path.normpath(item['path'])
+#         if item['type'] == 'tree':
+#             print(f"Item type is tree.\n")  # Debugging
+#             # If it's a directory, recursively call the function
+#             save_repo_directory_tree_to_file(item.get('contents', []), os.path.join(current_path, item_path), file_paths_repo, subdirectory)
+#         elif item['type'] == 'blob':
+#             print(f"Item type is a blob.\n")  # Debugging
+#             # If it's a file, append the file path to the list only if it starts with the specified subdirectory
+#             if item_path.startswith(os.path.join(current_path, subdirectory)):
+#                 file_paths_repo.append(os.path.join(current_path, item_path[len(subdirectory):].lstrip(os.sep).lstrip(os.path.sep)))
+#             else:
+#                 print(f"Skipping file {item_path} because it doesn't start with the specified subdirectory {subdirectory}.\n")  # Debugging
+
+#     return file_paths_repo
 
 
 def save_local_directory_tree_to_file(directory, terminal_text, output_file=local_tree_path):
@@ -272,16 +451,24 @@ def download_missing_files(github_repo_url, local_directory, branch_name, files_
                                 file.write(download_response.content)
                             counter_files_downloaded += 1
                             terminal_text.insert(tk.END, f"Downloaded: {relative_path}\n")
-                            sys.stdout.flush()  
+                            sys.stdout.flush()
+                            terminal_text.yview(tk.END) 
+                            terminal_text.see(tk.END)  
                         else:
                             terminal_text.insert(tk.END, f"Failed to download file: {relative_path}\n\n")
-                            sys.stdout.flush() 
+                            sys.stdout.flush()
+                            terminal_text.yview(tk.END) 
+                            terminal_text.see(tk.END) 
                     else:
                         terminal_text.insert(tk.END, f"Skipping existing file: {relative_path}\n\n")
-                        sys.stdout.flush() 
+                        sys.stdout.flush()
+                        terminal_text.yview(tk.END) 
+                        terminal_text.see(tk.END) 
                 else:
                     terminal_text.insert(tk.END, f"Download URL not available for file: {relative_path}\n\n")
-                    sys.stdout.flush() 
+                    sys.stdout.flush()
+                    terminal_text.yview(tk.END) 
+                    terminal_text.see(tk.END) 
 
                 # Check for pagination information in the response headers
                 link_header = response.headers.get('Link')
@@ -290,7 +477,9 @@ def download_missing_files(github_repo_url, local_directory, branch_name, files_
 
             except requests.exceptions.RequestException as e:
                 terminal_text.insert(tk.END, f"Failed to fetch file information. Error: {e}\n\n")
-                sys.stdout.flush() 
+                sys.stdout.flush()
+                terminal_text.yview(tk.END) 
+                terminal_text.see(tk.END) 
 
     return counter_files_downloaded
 
@@ -322,18 +511,26 @@ def download_files_not_in_local(files_to_download, terminal_text, dry_run=True):
             if confirmation:
                 terminal_text.insert(tk.END, "\nDownloading files:\n\n")
                 sys.stdout.flush()
+                terminal_text.yview(tk.END) 
+                terminal_text.see(tk.END)
                 # Download files
                 download_missing_files(github_repo_url, local_directory, branch_name, files_to_download, github_token, terminal_text, debug_mode=True)
             else:
                 terminal_text.insert(tk.END, "\nDownload cancelled.\n\n")
                 sys.stdout.flush()
+                terminal_text.yview(tk.END) 
+                terminal_text.see(tk.END)
         else:
             terminal_text.insert(tk.END, "\nDry Run. Download cancelled.\n\n")
             sys.stdout.flush()
+            terminal_text.yview(tk.END) 
+            terminal_text.see(tk.END)
     else:
         terminal_text.insert(tk.END, "\n*** No Missing Files to download ***", "\nYou have everything in the Github repo. Great!\n\n")
         terminal_text.insert(tk.END, "\n")
         sys.stdout.flush()
+        terminal_text.yview(tk.END) 
+        terminal_text.see(tk.END)
 
 
 def create_message_window(title, message):
