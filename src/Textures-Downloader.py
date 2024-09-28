@@ -13,7 +13,8 @@ from utils.helpers import load_config_new, save_config_new, ConfigManager
 from utils.sync import main_sync
 from utils.download_repo import download_repo_main
 
-app_version = "0.1.8-beta"
+app_version = "0.2-beta"
+app_version_num = 0.2
 
 config_manager = ConfigManager()
 
@@ -161,9 +162,9 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         self.terminal_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.terminal_frame.grid(row=11, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
+
        
-        self.terminal_text.insert(tk.END, "!!! ATTENTION !!! This Run Sync tool is only intended to be used for updates AFTER you have completed the initial installation. If you are attempting to do a first-time download/install of the textures pack, click the 'Fresh Install' button at the bottom right of this screen.\n")
-        self.terminal_text.yview(tk.END)  
+        
 
         tk.Label(self, text="PUT ALL OF YOUR CUSTOM TEXTURES AND DLC FILES\nIN 'user-customs' OR THEY WILL BE DELETED!", font=('TkDefaultFont', 13, 'bold'), fg="red", justify="left").grid(row=12, column=0, columnspan=2, pady=(0, 0))
         tk.Label(self, text="When using custom files, leave the default textures in place and\ndisable them by prepending the name with a dash (eg. '-file.png').", font=('TkDefaultFont', 12), justify="left").grid(row=13, column=0, columnspan=2, padx=(20, 0), pady=(0, 5))
@@ -227,6 +228,69 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         link_label.grid(row=19, column=2, padx=(5, 20), pady=(0, 10), sticky="e")
         # Bind the label to the function that should be executed on click
         link_label.bind("<Button-1>", lambda event: switch_func())
+
+        try:
+            # Fetch the JSON data from the URL
+            json_url = self.config_manager.json_url
+            response = requests.get(json_url)
+            response.raise_for_status()
+
+            # Parse the JSON data
+            json_data = response.json()
+
+            # About this release
+            version = json_data.get("version", "?")
+            release_date = json_data.get("release_date", "Date Unknown")
+            release_url = json_data.get("release_url", "")
+            total_size_gb = json_data.get("total_size", "? GB")
+            largest_size_gb = json_data.get("temp_size", "? GB")
+            min_version = json_data.get("min_downloader_app_version", "")
+            downloader_app_url = json_data.get("downloader_app_url", "")
+
+            # For the warning text if downloader_app_url is not null or empty
+            if downloader_app_url:
+                downloader_url_string = f" at {downloader_app_url}"
+            else:
+                downloader_url_string = "."  
+
+
+            # Compare app_version_num with min_version
+            if app_version_num >= min_version:
+                # self.terminal_text.insert(tk.END, f"App version {app_version_num} is compatible (>= {min_version})")
+                self.terminal_text.insert(tk.END, f"\n\n")
+                self.terminal_text.insert(tk.END, "!!! ATTENTION !!! This Run Sync tool is only intended to be used for updates AFTER you have completed the initial installation. If you are attempting to do a first-time download/install of the textures pack, click the 'Fresh Install' button at the bottom right of this screen.\n")
+                self.terminal_text.insert(tk.END, f"\n\n")  
+                self.terminal_text.yview(tk.END)
+                self.terminal_text.insert(tk.END, f"Internet connection test passed. Remote JSON data retrieved. Ready to proceed.")
+                self.terminal_text.insert(tk.END, f"\n\n")  
+                # self.terminal_text.insert(tk.END, json_data)
+                self.terminal_text.see(tk.END)  # Scroll to the end
+                self.terminal_text.update()
+            else:
+                self.terminal_text.insert(tk.END, f"!!! App version {app_version_num} is out of date (< {min_version}). Please update to latest version release{downloader_url_string}")
+                self.terminal_text.insert(tk.END, f"\n\n")
+                # Unbind the click event from both the rectangle and text
+                self.canvas.tag_unbind(self.button_bg, "<Button-1>")
+                self.canvas.tag_unbind(text_id, "<Button-1>")
+                # Change the appearance of the button to look disabled
+                self.canvas.itemconfig(self.button_bg, fill='#999999')  # Grey out background
+                self.canvas.itemconfig(text_id, fill="gray")            # Grey out text
+                self.canvas.bind("<Enter>", lambda event: self.canvas.config(cursor=""))  # Remove hand cursor
+
+                                    
+        
+        except Exception as e:
+            # print(f"Error fetching JSON data: {str(e)}")
+            self.terminal_text.insert(tk.END, f"Error fetching remote JSON data (debug info: {str(e)})")
+            self.terminal_text.insert(tk.END, f"\n\n")  
+            self.terminal_text.see(tk.END)  # Scroll to the end
+            self.terminal_text.update()
+            # About this release
+            version = "?"
+            release_date = "Date Unknown"
+            release_url = "#"
+            total_size_gb = "? GB"
+            largest_size_gb = "? GB"
     
     def on_enter(self, event):
         self.canvas.itemconfig(self.button_bg, fill='lightblue')
@@ -276,6 +340,7 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         self.terminal_text.insert(tk.END, "\n\nVariables updated. RESTART THE APP TO APPLY.\n\n")
         self.terminal_text.yview(tk.END) 
         self.terminal_text.see(tk.END)
+
 
 
 
@@ -351,14 +416,29 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             release_url = json_data.get("release_url", "")
             total_size_gb = json_data.get("total_size", "? GB")
             largest_size_gb = json_data.get("temp_size", "? GB")
-                        
+            min_version = json_data.get("min_downloader_app_version", "")
+            downloader_app_url = json_data.get("downloader_app_url", "")
 
-            self.terminal_text.insert(tk.END, f"!!! FOR 1st INSTALL ONLY. ATTENTION !!! This screen is only for installing the textures for the first time. If you already have the textures installed, to update them, click the 'Post-Install Updater' button at the bottom right of this page.")
-            self.terminal_text.insert(tk.END, f"\n\n")
-            self.terminal_text.insert(tk.END, f"Internet connection test passed. Remote JSON data retrieved. Ready to proceed.")
-            # self.terminal_text.insert(tk.END, json_data)
-            self.terminal_text.see(tk.END)  # Scroll to the end
-            self.terminal_text.update()
+            # For the warning text if downloader_app_url is not null or empty
+            if downloader_app_url:
+                downloader_url_string = f" at {downloader_app_url}"
+            else:
+                downloader_url_string = "."  
+
+            # Compare app_version_num with min_version
+            if app_version_num >= min_version:
+                # self.terminal_text.insert(tk.END, f"App version {app_version_num} is compatible (>= {min_version})")
+                self.terminal_text.insert(tk.END, f"\n\n")
+                self.terminal_text.insert(tk.END, f"!!! FOR 1st INSTALL ONLY. ATTENTION !!! This screen is only for installing the textures for the first time. If you already have the textures installed, to update them, click the 'Post-Install Updater' button at the bottom right of this page.")
+                self.terminal_text.insert(tk.END, f"\n\n")
+                self.terminal_text.insert(tk.END, f"Internet connection test passed. Remote JSON data retrieved. Ready to proceed.")
+                # self.terminal_text.insert(tk.END, json_data)
+                self.terminal_text.see(tk.END)  # Scroll to the end
+                self.terminal_text.update()
+            else:
+                self.terminal_text.insert(tk.END, f"!!! App version {app_version_num} is out of date (< {min_version}). Please update to latest version release{downloader_url_string}")
+                self.terminal_text.insert(tk.END, f"\n\n")
+                        
         
         except Exception as e:
             # print(f"Error fetching JSON data: {str(e)}")
@@ -496,6 +576,8 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
             message_label.grid(row=2, column=0, pady=(5, 5))
 
 
+
+
             # Divider
             ttk.Separator(self, orient="horizontal").grid(row=10, column=0, columnspan=3, pady=5, sticky="ew") 
 
@@ -531,6 +613,11 @@ class InstallerScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
 
         # Your widgets for screen 2
         # tk.Button(self, text="Switch to Post-Install Updater", command=switch_func).grid(row=1, column=0)
+
+        # Disable the button if the app version is lower than minimum required version per the json
+        if app_version_num < min_version:
+            if debug_mode == False:
+                download_button.config(state=tk.DISABLED)
 
     def on_save_button_click(self, config_dict, button, master):
         # Call the mixin's on_save_button_click method

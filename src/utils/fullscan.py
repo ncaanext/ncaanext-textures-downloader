@@ -262,16 +262,20 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
 #     return file_paths_repo
 
 
-def save_local_directory_tree_to_file(directory, terminal_text, output_file=local_tree_path):
+def save_local_directory_tree_to_file(directory, subdirectory, terminal_text, output_file=local_tree_path):
     file_paths = []
     for root, dirs, files in os.walk(directory):
         for file_name in files:
             # Ignore hidden files and folders like the .git folder and .gitignore file
             if not file_name.startswith(('.git', '.DS', '._')):
                 full_path = os.path.relpath(os.path.join(root, file_name), directory)
+                # print(f"Full path is: {full_path}")  # Debugging
                 # Make sure that if there is SLUS folder specified, we're only adding paths for files in that folder
                 if slus_folder is None or not slus_folder or full_path.startswith(slus_folder):
-                    file_paths.append(os.path.relpath(os.path.join(root, file_name), directory))
+                    # print(f"Full path is: {full_path}")  # Debugging
+                    relative_path = os.path.relpath(os.path.join(root, file_name), directory)
+                    path_to_add = os.path.join(subdirectory, relative_path)
+                    file_paths.append(path_to_add)
 
     # Sort the file paths alphabetically
     file_paths.sort()
@@ -560,7 +564,7 @@ def run_scan_and_print_output(terminal_text):
     terminal_text.insert(tk.END, f"Analyzing local directory structure...\n")
     terminal_text.insert(tk.END, "\n")
     scroll_terminal()
-    save_local_directory_tree_to_file(local_directory, terminal_text)
+    save_local_directory_tree_to_file(local_directory, subdirectory, terminal_text)
     terminal_text.insert(tk.END, "\n")
     scroll_terminal()
 
