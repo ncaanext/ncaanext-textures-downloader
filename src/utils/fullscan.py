@@ -296,11 +296,11 @@ def build_full_path(base_path, entry):
 def list_files_not_in_repo(local_tree_path, repo_tree_path, local_directory, dry_run=True):
     # Read local directory tree
     with open(local_tree_path, 'r') as local_file:
-        local_files = [line.strip() for line in local_file.readlines()]
+        local_files = [os.path.relpath(line.strip(), 'textures') for line in local_file.readlines()]
 
     # Read repo directory tree
     with open(repo_tree_path, 'r') as repo_file:
-        repo_files = [line.strip() for line in repo_file.readlines()]
+        repo_files = [os.path.relpath(line.strip(), 'textures') for line in repo_file.readlines()]
 
     # Build full paths using the provided base path
     local_full_paths = [os.path.join(local_directory, entry) for entry in local_files]
@@ -326,7 +326,7 @@ def list_files_to_download(local_tree_path, repo_tree_path, local_directory, ter
 
     # Check if the local files already exist on the computer
     with open(local_tree_path, 'r') as local_file:
-        local_files = [line.strip() for line in local_file.readlines()]
+        local_files = [os.path.relpath(line.strip(), 'textures') for line in local_file.readlines()]
 
     # Build full paths using the provided base path
     local_full_paths = [os.path.join(local_directory, entry) for entry in local_files]
@@ -334,7 +334,7 @@ def list_files_to_download(local_tree_path, repo_tree_path, local_directory, ter
 
     # Read repo directory tree
     with open(repo_tree_path, 'r') as repo_file:
-        repo_files = [line.strip() for line in repo_file.readlines()]
+        repo_files = [os.path.relpath(line.strip(), 'textures') for line in repo_file.readlines()]
 
     # Build full paths using the provided base path
     repo_full_paths = [os.path.join(local_directory, entry) for entry in repo_files]
@@ -632,6 +632,9 @@ def run_scan_and_print_output(terminal_text):
 
     # Call the function to delete empty folders after syncing files
     remove_empty_folders(local_directory, debug_mode=False)
+
+    # Set initial_setup_done to True
+    config_manager.initial_setup_done = True
 
     terminal_text.insert(tk.END, "\n")  # Add a line break 
     terminal_text.insert(tk.END, "#                                                                   #\n")
