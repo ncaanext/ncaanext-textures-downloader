@@ -634,7 +634,6 @@ def run_scan_and_print_output(terminal_text):
     remove_empty_folders(local_directory, debug_mode=False)
 
     # Set initial_setup_done to True
-    config_manager.initial_setup_done = True
 
     terminal_text.insert(tk.END, "\n")  # Add a line break 
     terminal_text.insert(tk.END, "#                                                                   #\n")

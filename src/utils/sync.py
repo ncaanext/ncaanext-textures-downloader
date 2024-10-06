@@ -86,7 +86,7 @@ def main_sync(user_choice, terminal_text, github_token, last_run_date):
             # Format and convert the UTC time to a string with milliseconds
             utc_time_str = utc_now.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
             last_run_date = utc_time_str
-            save_config_new({'last_run_date': last_run_date})
+            save_config_new({'last_run_date': last_run_date, 'initial_setup_done': 'True'})
             terminal_text.insert(tk.END, "Last Sync Date updated.\n")
 
         except:
