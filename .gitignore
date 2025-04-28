@@ -6,8 +6,8 @@ src/repo/*
 config-*.txt
 *-BAK.*
 __pycache__
-local_directory_tree.txt
-repo_directory_tree.txt
+local_directory_tree*.txt
+repo_directory_tree*.txt
 src-backup
 local-notes.md
 

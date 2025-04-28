@@ -13,8 +13,8 @@ from utils.helpers import load_config_new, save_config_new, ConfigManager
 from utils.sync import main_sync
 from utils.download_repo import download_repo_main
 
-app_version = "0.22-beta"
-app_version_num = 0.22
+app_version = "0.23-beta"
+app_version_num = 0.23
 
 config_manager = ConfigManager()
 
@@ -169,14 +169,49 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         tk.Label(self, text="PUT ALL OF YOUR CUSTOM TEXTURES AND DLC FILES\nIN 'user-customs' OR THEY WILL BE DELETED!", font=('TkDefaultFont', 13, 'bold'), fg="red", justify="left").grid(row=12, column=0, columnspan=2, pady=(0, 0))
         tk.Label(self, text="When using custom files, leave the default textures in place and\ndisable them by prepending the name with a dash (eg. '-file.png').", font=('TkDefaultFont', 12), justify="left").grid(row=13, column=0, columnspan=2, padx=(20, 0), pady=(0, 5))
 
-        def main_sync_wrapper(event):
+        def main_sync_wrapper(event=None):
+            # Initialize sync running flag if it doesn't exist
+            if not hasattr(self, '_sync_running'):
+                self._sync_running = False
+                
+            # Check if sync is already running
+            if self._sync_running:
+                print("Sync already running, ignoring click")
+                return
+                
+            print("Button clicked - starting sync")  # Debug print
+            
+            # Update UI state immediately
+            self._sync_running = True
+            self.update_idletasks()  # Force UI update
+            self.canvas.itemconfig(self.button_bg, fill='#999999')
+            self.update_idletasks()  # Force UI update
+            
+            # Get parameters before starting thread
             user_choice = "full_scan" if self.user_choice_var.get() == 2 else "only_new_content"
             github_token = self.github_token_entry.get()
             last_run_date = self.last_run_date_entry.get()
-
+            
+            # Clear terminal
             self.terminal_text.delete(1.0, tk.END)
-            thread = Thread(target=main_sync, args=(user_choice, self.terminal_text, github_token, last_run_date))
+            self.update_idletasks()  # Force UI update
+            
+            def run_sync():
+                try:
+                    # Use after() to update UI from the thread
+                    self.after(0, lambda: self.terminal_text.insert(tk.END, "Starting sync...\n"))
+                    main_sync(user_choice, self.terminal_text, github_token, last_run_date)
+                except Exception as e:
+                    self.after(0, lambda: self.terminal_text.insert(tk.END, f"Error: {str(e)}\n"))
+                finally:
+                    # Reset UI state using after()
+                    self.after(0, lambda: self.canvas.itemconfig(self.button_bg, fill='#cccccc'))
+                    self._sync_running = False
+            
+            # Start thread as daemon
+            thread = Thread(target=run_sync, daemon=True)
             thread.start()
+
 
         
 
@@ -190,14 +225,18 @@ class PostInstallScreen(tk.Frame, DebugModeMixin, OnSaveButtonClickMixin):
         self.button_bg = self.create_rounded_rectangle(0, 0, 148, 38, rounding, fill='#cccccc', outline="black")  # Set a different background color
         text_id = self.canvas.create_text(75, 20, text="Run Sync", fill="black", font=('TkDefaultFont', 16, 'bold'))
 
-        # Bind events to the canvas items (rounded rectangle and text)
-        self.canvas.tag_bind(self.button_bg, "<Enter>", self.on_enter)
-        self.canvas.tag_bind(self.button_bg, "<Leave>", self.on_leave)
+        # # Bind events to the canvas items (rounded rectangle and text)
+        # self.canvas.tag_bind(self.button_bg, "<Enter>", self.on_enter)
+        # self.canvas.tag_bind(self.button_bg, "<Leave>", self.on_leave)
+        # self.canvas.tag_bind(self.button_bg, "<Button-1>", main_sync_wrapper)
+
+
+        # self.canvas.tag_bind(text_id, "<Enter>", self.on_enter)
+        # self.canvas.tag_bind(text_id, "<Leave>", self.on_leave)
+        # self.canvas.tag_bind(text_id, "<Button-1>", main_sync_wrapper)
+
+        # Modify the button bindings to use a single binding
         self.canvas.tag_bind(self.button_bg, "<Button-1>", main_sync_wrapper)
-
-
-        self.canvas.tag_bind(text_id, "<Enter>", self.on_enter)
-        self.canvas.tag_bind(text_id, "<Leave>", self.on_leave)
         self.canvas.tag_bind(text_id, "<Button-1>", main_sync_wrapper)
 
         # Set the cursor when hovering

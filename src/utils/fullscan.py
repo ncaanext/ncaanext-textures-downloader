@@ -41,87 +41,183 @@ repo_tree_path = "utils/repo_directory_tree.txt"
 dry_run = False
 
 
-def get_tree_contents(owner, repo, subdirectory='', sha=branch_name):
 
+def get_tree_contents(owner, repo, subdirectory='', sha=branch_name):
     # Initialize the array to hold the tree data
     tree_data = []
 
-    # Initialize the parent directory variable to keep track of full paths
-    parent_directory = ""
-
-    # if file_paths_repo is None:
-        # file_paths_repo = []
-
-    def fetch_tree(owner, repo, parent_directory, subdirectory='', sha=branch_name, recursive=''):
-
-        # Ensure subdirectory always ends with a path separator
-        if parent_directory!= '':
-            parent_directory = os.path.normpath(parent_directory)
-            if not parent_directory.endswith(os.sep):
-              parent_directory += os.sep
-        # print(f"Parent directory before fetching response is: {parent_directory}")  # Debugging
-
+    def fetch_tree(owner, repo, parent_directory='', subdirectory='', sha=branch_name, recursive=''):
         url = f'https://api.github.com/repos/{owner}/{repo}/git/trees/{sha}{recursive}'
-        # print(f"Fetching response with URL: {url}\n") # Debugging
         headers = {'Authorization': f'Bearer {github_token}', 'X-GitHub-Api-Version': '2022-11-28'}
         response = requests.get(url, headers=headers)
 
         if response.status_code != 200:
-            # Handle error as needed
             print(response.json())
-            print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}. \nAPI rate limit probably exceeded. Try again later. The limit resets every hour. You can see the exact reset time above at the beginning of this output.\n")
-            print("Terminating the process. Hasta la vista, baby.\n")
+            print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}.")
+            print("API rate limit probably exceeded. Try again later.")
             sys.exit(1)
 
         fetched_response = response.json().get('tree', [])
         fetched_response_is_truncated = response.json().get('truncated')
 
-        if fetched_response_is_truncated == False:
-            # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
-            # print(f"Tree IS NOT truncated")  # Debugging
-            # print(f"Parent directory is: {parent_directory}")  # Debugging
-            for item in fetched_response:  # Ensure each item is appended
-                full_path = os.path.join(parent_directory, item['path'])
-                item['path'] = full_path
+        if not fetched_response_is_truncated:
+            for item in fetched_response:
+                # Only add parent_directory if it exists and isn't already in the path
+                if parent_directory and not item['path'].startswith(parent_directory):
+                    item['path'] = os.path.normpath(os.path.join(parent_directory, item['path']))
                 tree_data.append(item)
-            # print(f"Appended tree_data with fetched_response.")  # Debugging
-
             return fetched_response, fetched_response_is_truncated
 
-        if fetched_response_is_truncated == True:
-            
-            # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
-            # print(f"Tree IS truncated")  # Debugging
-            # print(f"Parent directory is: {parent_directory}")  # Debugging
-            # print(f"{fetched_response}")  # Debugging
-
+        if fetched_response_is_truncated:
             # Fetch the tree non-recursively
-            fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, parent_directory, subdirectory, sha)
+            fetched_response, _ = fetch_tree(owner, repo, parent_directory, subdirectory, sha)
             
-            # print(f"\nFetched response without recursive: {fetched_response}\n")  # Debugging
-            # print(f"Fetched response without recursive. Looping though the sha's...")  # Debugging
-
-            # Loop through all of the hashes in the non-recursive tree and run the recursive fetch on each one
+            # Loop through all items in the non-recursive tree
             for item in fetched_response:
-                full_path = os.path.join(parent_directory, item['path'])  # Keep track of full path
+                # Normalize the path to prevent duplicates
+                current_path = os.path.normpath(item['path'])
+                if parent_directory and not current_path.startswith(parent_directory):
+                    current_path = os.path.normpath(os.path.join(parent_directory, current_path))
+                
                 if item['type'] == 'tree':
-                    # print(f"SHA is tree. Fetching recursive response for sha {item['path']}")  # Debugging
-                    fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, full_path, '', item['sha'], '?recursive=1')
+                    # For directories, fetch contents recursively
+                    fetch_tree(owner, repo, current_path, '', item['sha'], '?recursive=1')
                 elif item['type'] == 'blob':
-                    # print(f"SHA is blob. Appending tree_data for sha {item['path']}")  # Debugging
-                    item['path'] = full_path
+                    # For files, just add them to tree_data with the correct path
+                    item['path'] = current_path
                     tree_data.append(item)
 
             return fetched_response, fetched_response_is_truncated
 
-
     # Fetch the root tree recursively
-    fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, '', subdirectory, branch_name, '?recursive=1')
+    fetched_response, _ = fetch_tree(owner, repo, '', subdirectory, branch_name, '?recursive=1')
     
-    # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n Final tree_data: {tree_data}\n")  # Debugging
-    # print(f"\nDone. Returning tree_data.\n")  # Debugging
+    # Clean up paths and add 'textures/' prefix only once
+    for item in tree_data:
+        # Normalize path and remove any duplicate 'textures/' prefixes
+        path = os.path.normpath(item['path'])
+        path = path.replace('textures/textures/', 'textures/')
+        if not path.startswith('textures/'):
+            path = f'textures/{path}'
+        item['path'] = path
+
+    # # Print debug information
+    # print(f"\nFinal tree_data (first 30 items):") # Debugging
+    # for item in tree_data[:30]: # Debugging
+    #     print(f"{item}\n") # Debugging
+
+    # print(f"\nFinal tree_data (last 30 items):") # Debugging
+    # for item in tree_data[-30:]: # Debugging
+    #     print(f"{item}\n") # Debugging
+
+    # print(f"Total items in tree_data: {len(tree_data)}") # Debugging
+
     return tree_data
 
+
+
+############################# OLD FUNCTION WITH REPEATING PATH SEGMENTS ISSUE #############################
+    
+# def get_tree_contents(owner, repo, subdirectory='', sha=branch_name):
+
+#     # Initialize the array to hold the tree data
+#     tree_data = []
+
+#     # Initialize the parent directory variable to keep track of full paths
+#     parent_directory = ""
+
+#     # if file_paths_repo is None:
+#         # file_paths_repo = []
+
+#     def fetch_tree(owner, repo, parent_directory, subdirectory='', sha=branch_name, recursive=''):
+
+#         # Ensure subdirectory always ends with a path separator
+#         if parent_directory!= '':
+#             parent_directory = os.path.normpath(parent_directory)
+#             if not parent_directory.endswith(os.sep):
+#               parent_directory += os.sep
+#         # print(f"Parent directory before fetching response is: {parent_directory}")  # Debugging
+
+#         url = f'https://api.github.com/repos/{owner}/{repo}/git/trees/{sha}{recursive}'
+#         # print(f"Fetching response with URL: {url}\n") # Debugging
+#         headers = {'Authorization': f'Bearer {github_token}', 'X-GitHub-Api-Version': '2022-11-28'}
+#         response = requests.get(url, headers=headers)
+
+#         if response.status_code != 200:
+#             # Handle error as needed
+#             print(response.json())
+#             print(f"\nERROR: Unable to fetch repository tree. Status code: {response.status_code}. \nAPI rate limit probably exceeded. Try again later. The limit resets every hour. You can see the exact reset time above at the beginning of this output.\n")
+#             print("Terminating the process. Hasta la vista, baby.\n")
+#             sys.exit(1)
+
+#         fetched_response = response.json().get('tree', [])
+#         fetched_response_is_truncated = response.json().get('truncated')
+
+#         if fetched_response_is_truncated == False:
+#             # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
+#             # print(f"Tree IS NOT truncated")  # Debugging
+#             # print(f"Parent directory is: {parent_directory}")  # Debugging
+#             for item in fetched_response:  # Ensure each item is appended
+#                 full_path = os.path.join(parent_directory, item['path'])
+#                 item['path'] = full_path
+#                 tree_data.append(item)
+#             # print(f"Appended tree_data with fetched_response.")  # Debugging
+
+#             return fetched_response, fetched_response_is_truncated
+
+#         if fetched_response_is_truncated == True:
+            
+#             # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")  # Debugging
+#             # print(f"Tree IS truncated")  # Debugging
+#             # print(f"Parent directory is: {parent_directory}")  # Debugging
+#             # print(f"{fetched_response}")  # Debugging
+
+#             # Fetch the tree non-recursively
+#             fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, parent_directory, subdirectory, sha)
+            
+#             # print(f"\nFetched response without recursive: {fetched_response}\n")  # Debugging
+#             # print(f"Fetched response without recursive. Looping though the sha's...")  # Debugging
+
+#             # Loop through all of the hashes in the non-recursive tree and run the recursive fetch on each one
+#             for item in fetched_response:
+#                 full_path = os.path.join(parent_directory, item['path'])  # Keep track of full path
+#                 if item['type'] == 'tree':
+#                     # print(f"SHA is tree. Fetching recursive response for sha {item['path']}")  # Debugging
+#                     fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, full_path, '', item['sha'], '?recursive=1')
+#                 elif item['type'] == 'blob':
+#                     # print(f"SHA is blob. Appending tree_data for sha {item['path']}")  # Debugging
+#                     item['path'] = full_path
+#                     tree_data.append(item)
+
+#             return fetched_response, fetched_response_is_truncated
+
+
+#     # Fetch the root tree recursively
+#     fetched_response, fetched_response_is_truncated = fetch_tree(owner, repo, '', subdirectory, branch_name, '?recursive=1')
+    
+#     # print(f"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n Final tree_data: {tree_data}\n")  # Debugging
+#     # print(f"\nDone. Returning tree_data.\n")  # Debugging
+
+#     # Print the first 30 items in tree_data
+#     print(f"\nFinal tree_data (first 30 items):")
+#     for item in tree_data[:30]:
+#         print(f"{item}\n")
+
+#     # Print the last 30 items in tree_data
+#     print(f"\nFinal tree_data (last 30 items):")
+#     for item in tree_data[-30:]:
+#         print(f"{item}\n")
+
+#     # Print the number of items in tree_data
+#     print(f"Total items in tree_data: {len(tree_data)}")
+
+#     return tree_data  
+
+
+
+    
+
+#############################################################################33
 def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo=None, subdirectory=''):
     if file_paths_repo is None:
         file_paths_repo = []
@@ -144,10 +240,25 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
         elif item['type'] == 'blob':
             # If it's a file, append the file path to the list only if it starts with the specified subdirectory
             if item_path.startswith(os.path.join(current_path, subdirectory)):
-                file_paths_repo.append(os.path.join(current_path, item_path[len(subdirectory):].lstrip(os.sep).lstrip(os.path.sep)))
+                # file_paths_repo.append(os.path.join(current_path, item_path[len(subdirectory):].lstrip(os.sep).lstrip(os.path.sep)))
+                file_paths_repo.append(os.path.join(current_path, item_path))
 
     return file_paths_repo
+###################################################################################3
 
+
+
+
+
+
+
+
+
+
+
+
+
+####################### OLD FUNCTTION ####################### 
 
 # def get_tree_contents(owner, repo, subdirectory=subdirectory, branch_name=branch_name, github_token=github_token):
 #     headers = {
@@ -196,7 +307,7 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
 #     # Fetch the root tree (main branch or other specified branch) with recursion
 #     print(f"Fetching root tree for branch: {branch_name}")  # Debugging
 #     root_data = fetch_tree(branch_name, recursive=True)
-#     tree_contents = root_data.get('tree', [])
+#     tree_data = root_data.get('tree', [])
     
 #     # Print the root data for debugging
 #     print(f"Root data: {root_data}")  # Debugging
@@ -206,24 +317,38 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
 #         # Fetch the subdirectory tree recursively if specified
 #         print(f"Filtering contents by subdirectory: {subdirectory}")  # Debugging
 #         subdirectory_sha = None
-#         for item in tree_contents:
+#         for item in tree_data:
 #             if item['path'] == subdirectory and item['type'] == 'tree':
 #                 subdirectory_sha = item['sha']
 #                 break
         
 #         if subdirectory_sha:
-#             tree_contents = fetch_tree(subdirectory_sha, recursive=True).get('tree', [])
+#             tree_data = fetch_tree(subdirectory_sha, recursive=True).get('tree', [])
 #         else:
 #             print(f"Subdirectory {subdirectory} not found.")
-#             tree_contents = []
+#             tree_data = []
 #     else:
 #         # If no subdirectory is specified, fetch all contents recursively
-#         tree_contents = fetch_tree(branch_name, recursive=True).get('tree', [])
+#         tree_data = fetch_tree(branch_name, recursive=True).get('tree', [])
     
 #     # Print final tree contents for debugging
-#     print(f"Final tree contents: {tree_contents}")  # Debugging
+#     # print(f"Final tree contents: {tree_data}")  # Debugging
+
+#     for item in tree_data:
+#       item['path'] = f'textures/{item["path"]}'
+
+#     # Print the first 30 items in tree_data
+#     print(f"\nFinal tree_data (first 30 items):")
+#     for item in tree_data[:30]:
+#         print(f"{item}\n")
+
+#     # Print the last 30 items in tree_data
+#     print(f"\nFinal tree_data (last 30 items):")
+#     for item in tree_data[-30:]:
+#         print(f"{item}\n")
+
     
-#     return tree_contents
+#     return tree_data
 
 
 
