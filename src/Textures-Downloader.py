@@ -14,8 +14,8 @@ from utils.helpers import load_config_new, save_config_new, ConfigManager
 from utils.sync import main_sync
 from utils.download_repo import download_repo_main
 
-app_version = "0.23-beta"
-app_version_num = 0.23
+app_version = "0.24-beta"
+app_version_num = 0.24
 
 config_manager = ConfigManager()
 

@@ -243,6 +243,19 @@ def save_repo_directory_tree_to_file(tree_data, current_path='', file_paths_repo
                 # file_paths_repo.append(os.path.join(current_path, item_path[len(subdirectory):].lstrip(os.sep).lstrip(os.path.sep)))
                 file_paths_repo.append(os.path.join(current_path, item_path))
 
+    # Remove extra "textures" if double "textures" in the path
+    for i in range(len(file_paths_repo)):
+        normalized_path = os.path.normpath(file_paths_repo[i])
+        parts = normalized_path.split(os.sep)
+
+        # Check if first two parts are both "textures"
+        if len(parts) >= 2 and parts[0].lower() == 'textures' and parts[1].lower() == 'textures':
+            # Remove the first 'textures'
+            file_paths_repo[i] = os.sep.join(parts[1:])
+        else:
+            # Ensure normalized (optional)
+            file_paths_repo[i] = normalized_path
+
     return file_paths_repo
 ###################################################################################3
 
