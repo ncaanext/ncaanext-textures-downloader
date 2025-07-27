@@ -707,7 +707,7 @@ def run_scan_and_print_output(terminal_text):
     scroll_terminal()
 
     # Get the contents of the github repo root directory 
-    terminal_text.insert(tk.END, f"Analyzing Github repo directory structure...\n")
+    terminal_text.insert(tk.END, f"Analyzing Github repo directory structure (this will take a few minutes, be patient)...\n")
     terminal_text.insert(tk.END, "\n")
     scroll_terminal()
 
