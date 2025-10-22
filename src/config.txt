@@ -6,7 +6,7 @@ debug_mode: False
 ###^^^^^ ABOVE IS AUTO-GENERATED. DO NOT EDIT ^^^^^###  
 project_name: NCAA NEXT
 owner: ncaanext
-repo: ncaa-next-25
+repo: ncaa-next-26
 branch_name: main
 subdirectory: textures
 slus_folder: SLUS-21214
