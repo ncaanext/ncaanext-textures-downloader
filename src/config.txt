@@ -10,4 +10,4 @@ repo: ncaa-next-26
 branch_name: main
 subdirectory: textures
 slus_folder: SLUS-21214
-json_url: https://raw.githubusercontent.com/ncaanext/ncaa-next-25/main/installer-data.json
+json_url: https://raw.githubusercontent.com/ncaanext/ncaa-next-26/main/installer-data.json
